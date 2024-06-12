@@ -8,37 +8,48 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v3
-    
+
+    - name: Install Minikube
+      run: |
+        sudo apt-get update && sudo apt-get install -y conntrack
+        curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
+        sudo install minikube-linux-amd64 /usr/local/bin/minikube
+
+    - name: Start Minikube
+      run: |
+        minikube start --driver=docker
+        mkdir -p $HOME/.kube
+        minikube kubectl -- get nodes
+        cp -i $(minikube kubeconfig-path) $HOME/.kube/config
+
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v2
-    
+
     - name: Login to Docker Hub
       uses: docker/login-action@v2
       with:
         username: ${{ secrets.DOCKER_USERNAME }}
         password: ${{ secrets.DOCKER_PASSWORD }}
-    
+
     - name: Build and push Docker image
       uses: docker/build-push-action@v4
       with:
         push: true
         tags: dhruv022/wisecow:latest
-    
+
     - name: Set up Kubeconfig
       run: |
-        mkdir -p $HOME/.kube
-        echo "${{ secrets.KUBECONFIG }}" > $HOME/.kube/config
         echo "${{ secrets.MINIKUBE_CLIENT_CRT }}" > $HOME/.kube/client.crt
         echo "${{ secrets.MINIKUBE_CLIENT_KEY }}" > $HOME/.kube/client.key
         echo "${{ secrets.MINIKUBE_CA_CRT }}" > $HOME/.kube/ca.crt
-        
+
         sed -i 's|\\|/|g' $HOME/.kube/config
         echo "KUBECONFIG=$HOME/.kube/config" >> $GITHUB_ENV
-    
+
     - name: Deploy to Kubernetes
       run: |
         kubectl apply -f k8s/deployment.yaml --kubeconfig=$HOME/.kube/config
