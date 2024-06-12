@@ -32,6 +32,11 @@ jobs:
       run: |
         mkdir -p $HOME/.kube
         echo "${{ secrets.KUBECONFIG }}" > $HOME/.kube/config
+        echo "${{ secrets.MINIKUBE_CLIENT_KEY }}" > $HOME/.kube/client.key
+        echo "${{ secrets.MINIKUBE_CA_CRT }}" > $HOME/.kube/ca.crt
+        
+        sed -i 's|C:\\Users\\Dhruv\\.minikube\\profiles\\minikube|$HOME/.kube|g' $HOME/.kube/config
+        sed -i 's|\\|/|g' $HOME/.kube/config
         echo "KUBECONFIG=$HOME/.kube/config" >> $GITHUB_ENV
     
     - name: Deploy to Kubernetes
